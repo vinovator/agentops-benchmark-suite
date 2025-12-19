@@ -1,0 +1,11 @@
+account_id,company_name,industry,status,total_revenue
+ACC-001,CyberDyne Systems,Defense,Active,5000000
+ACC-002,Acme Corp,Manufacturing,Churned,120000
+ACC-003,Wayne Enterprises,Conglomerate,Active,9500000
+ACC-004,Stark Industries,Technology,Active,8000000
+ACC-005,Massive Dynamic,R&D,Prospect,0
+ACC-006,Oscorp,BioTech,Active,3200000
+ACC-007,Tyrell Corp,Robotics,Churned,50000
+ACC-008,Soylent Corp,Food/Bev,Active,900000
+ACC-009,InGen,BioTech,Prospect,0
+ACC-010,Globex,Software,Active,1500000

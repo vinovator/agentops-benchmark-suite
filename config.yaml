@@ -1,0 +1,14 @@
+project_name: "AgentOps Benchmark"
+agents:
+  agent_a:
+    name: "Agent A (Intern)"
+    provider: "ollama"
+    model: "llama3.2:3b"
+  agent_b:
+    name: "Agent B (Operator)"
+    provider: "ollama"
+    model: "llama3.1:latest"
+  agent_c:
+    name: "Agent C (Strategist)"
+    provider: "google"
+    model: "gemini-2.5-flash"

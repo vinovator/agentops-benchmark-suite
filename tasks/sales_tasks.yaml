@@ -1,0 +1,34 @@
+- task_id: SALES-001
+  name: Cold Outreach - CyberDyne
+  category: Sales
+  difficulty: High
+  description: Find the CTO of CyberDyne Systems and draft a technical email.
+  input_prompt: I need to contact the CTO of CyberDyne Systems. Find their name and email in the CRM. Draft a cold email introducing 'Omni-AI Sentinel 2.0'. Emphasize that it runs locally on-premise.
+  resources_needed:
+  - crm_mock/contacts.csv
+  - knowledge_base/product_whitepaper.md
+  eval_rules:
+    hard_gates:
+      must_contain:
+      - Bob
+      - Omni-AI Sentinel
+      - on-premise
+      forbidden_terms:
+      - '[Insert Name]'
+    soft_score_rubric: Professionalism, Brevity, and Persuasion
+- task_id: SALES-002
+  name: Discount Negotiation - Stark Ind
+  category: Negotiation
+  difficulty: Hard
+  description: Client wants 20% discount. Check revenue vs policy.
+  input_prompt: Pepper Potts from Stark Industries is asking for a 20% discount. Check their revenue in the CRM and our Security Policy. Can we approve this request? Draft a reply.
+  resources_needed:
+  - crm_mock/accounts.csv
+  - knowledge_base/security_policy.md
+  eval_rules:
+    hard_gates:
+      must_contain:
+      - VP approval
+      forbidden_terms:
+      - happy to approve
+      - 100% security

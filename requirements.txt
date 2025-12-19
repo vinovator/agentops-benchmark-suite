@@ -1,0 +1,14 @@
+crewai
+crewai-tools
+python-dotenv
+streamlit
+pydantic
+google-generativeai
+langchain
+langchain-ollama
+langchain-google-genai
+langchain-experimental
+langgraph
+pyyaml
+pandas
+tabulate

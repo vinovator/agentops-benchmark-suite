@@ -1,0 +1,9 @@
+
+    Meeting Date: 2024-03-10
+    Attendees: Norman Osborn (Oscorp), Sales Rep
+    Transcript:
+    Sales Rep: Good morning.
+    Norman Osborn: Let's get to business. We are churning unless we get Legacy Support included for free.
+    Sales Rep: I will note that down.
+    Norman Osborn: Also, ensure the security terms are updated.
+    

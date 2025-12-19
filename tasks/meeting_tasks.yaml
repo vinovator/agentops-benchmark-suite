@@ -1,0 +1,20 @@
+- task_id: "MEET-001"
+  name: "Action Item Extraction"
+  input_prompt: |
+    You are a Meeting Secretary.
+    
+    1. Read the following transcript snippet:
+       "Okay, let's wrap up. Alice, I need you to finalize the Q3 report by Friday. And Bob, please reach out to the CTO of Acme Corp to schedule a demo."
+    
+    2. For each person mentioned (Alice, Bob), search the CRM (Contacts Table) to find their Email Address.
+    3. Output a strictly formatted JSON list of action items.
+       Format: [{"assignee_email": "...", "task": "..."}]
+  
+  eval_rules:
+    hard_gates:
+      must_contain:
+        - "alice@cyberdyne.com"   # Must look up the real email
+        - "bob@cyberdyne.com"     # Must look up the real email
+        - "finaliz"               # Task keyword
+        - "Acme Corp"             # Task keyword
+    soft_rubric: "Did the agent correctly map 'Alice' to her specific email found in the CSV, rather than guessing?"

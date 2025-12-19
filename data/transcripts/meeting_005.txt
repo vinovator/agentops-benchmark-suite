@@ -1,0 +1,9 @@
+
+    Meeting Date: 2024-03-10
+    Attendees: Hank Scorpio (Globex), Sales Rep
+    Transcript:
+    Sales Rep: Good morning.
+    Hank Scorpio: Let's get to business. I want to buy 50 licenses. Who is the account manager?
+    Sales Rep: I will note that down.
+    Hank Scorpio: Also, ensure the security terms are updated.
+    

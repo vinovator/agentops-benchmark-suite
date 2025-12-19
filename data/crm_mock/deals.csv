@@ -1,0 +1,16 @@
+deal_id,account_id,deal_name,amount,stage,close_date
+DL-100,ACC-003,Project Beta License,1289611,Negotiation,2024-06-15
+DL-101,ACC-007,Project Beta License,57330,Discovery,2024-06-15
+DL-102,ACC-004,Project Alpha License,847401,Closed Lost,2024-06-15
+DL-103,ACC-010,Project Delta License,1068728,Closed Lost,2024-06-15
+DL-104,ACC-006,Project Alpha License,860953,Discovery,2024-06-15
+DL-105,ACC-006,Project Beta License,749991,Negotiation,2024-06-15
+DL-106,ACC-009,Project Gamma License,628545,Negotiation,2024-06-15
+DL-107,ACC-005,Project Gamma License,412869,Discovery,2024-06-15
+DL-108,ACC-007,Project Gamma License,330799,Closed Won,2024-06-15
+DL-109,ACC-006,Project Delta License,182669,Closed Won,2024-06-15
+DL-110,ACC-003,Project Alpha License,685909,Closed Lost,2024-06-15
+DL-111,ACC-002,Project Alpha License,1039767,Discovery,2024-06-15
+DL-112,ACC-004,Project Alpha License,1180425,Negotiation,2024-06-15
+DL-113,ACC-006,Project Alpha License,199657,Closed Lost,2024-06-15
+DL-114,ACC-009,Project Gamma License,1083031,Discovery,2024-06-15

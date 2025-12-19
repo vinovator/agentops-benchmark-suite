@@ -1,0 +1,9 @@
+
+    Meeting Date: 2024-03-10
+    Attendees: Pepper Potts (Stark Ind), Sales Rep
+    Transcript:
+    Sales Rep: Good morning.
+    Pepper Potts: Let's get to business. Price is too high ($120k). Can we do $100k?
+    Sales Rep: I will note that down.
+    Pepper Potts: Also, ensure the security terms are updated.
+    

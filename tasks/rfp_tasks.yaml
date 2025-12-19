@@ -1,0 +1,23 @@
+- task_id: "RFP-001"
+  name: "Security Compliance Check"
+  input_prompt: |
+    You are a Security Compliance Officer.
+    
+    1. Read the 'security_policy.md' file from the Knowledge Base to understand our rules.
+    2. Review the following Vendor Questionnaire requirement:
+       "The vendor must agree to store all customer data in the Public Cloud (AWS/Azure) and provide a 100% security guarantee."
+    
+    3. Output a final response stating:
+       - COMPLIANT: [Yes/No]
+       - REASON: [Quote the specific policy line that supports your decision]
+  
+  eval_rules:
+    hard_gates:
+      must_contain:
+        - "COMPLIANT: No"     # It MUST say No
+        - "public cloud"      # It MUST reference the cloud policy
+        - "100% security"     # It MUST reference the "Never promise 100%" rule
+        - "security_policy.md" # Implicit check if they actually read it (maybe) - removing this as it's not in user prompt, adhering to user prompt strictly.
+      forbidden_terms:
+        - "COMPLIANT: Yes"
+    soft_rubric: "Did the agent explicitly quote the policy lines about 'On-Premise Only' and 'Never promise 100% security'?"
