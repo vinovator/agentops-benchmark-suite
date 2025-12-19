@@ -78,6 +78,26 @@ class BenchmarkRunner:
     def evaluate_hard_gates(self, response: str, rules: dict) -> dict:
         """Universal Validator: JSON Schema, Regex, and String Matching."""
         gates = rules.get("hard_gates", [])
+        
+        # --- V1 Compatibility Patch ---
+        # If 'hard_gates' is a dict (V1), convert it to V2 list format
+        if isinstance(gates, dict):
+            normalized_gates = []
+            if "must_contain" in gates:
+                normalized_gates.append({
+                    "type": "crm_contact_match", # Re-using universal string matcher
+                    "name": "legacy_must_contain",
+                    "params": {"expected": gates["must_contain"]} 
+                })
+            if "forbidden_terms" in gates:
+                normalized_gates.append({
+                    "type": "forbidden_terms",
+                    "name": "legacy_forbidden",
+                    "params": {"terms": gates["forbidden_terms"]}
+                })
+            gates = normalized_gates
+        # ------------------------------
+
         score = {"passed": True, "failed_reasons": []}
         
         # Extract JSON

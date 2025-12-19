@@ -49,9 +49,17 @@ To run the full evaluation suite:
     ```bash
     pip install -r requirements.txt
     ```
-2.  **Configure Environment**:
+2.  **Generate World Data** (CRITICAL):
+    Measurements require a populated mock CRM and Knowledge Base.
+    Run the notebook `notebooks/01_generate_sandbox_data.ipynb` to create:
+    *   `data/crm_mock/` (Accounts, Contacts, Deals CSVs)
+    *   `data/knowledge_base/` (Markdown policies, PDF pricing guides)
+    *   `data/transcripts/` (Meeting logs)
+
+3.  **Configure Environment**:
     Create a `.env` file with your `GOOGLE_API_KEY`.
-3.  **Run**:
+
+4.  **Run Benchmark**:
     ```bash
     python -m src.runner
     ```
