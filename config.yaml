@@ -12,3 +12,7 @@ agents:
     name: "Agent C (Strategist)"
     provider: "google"
     model: "gemini-2.5-flash"
+  judge:
+    name: "Judge (Teacher)"
+    provider: "google"
+    model: "gemini-2.5-flash"

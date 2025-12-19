@@ -23,9 +23,14 @@ class BenchmarkRunner:
             self.config = yaml.safe_load(f)
 
         # 2. Initialize Judge (The Teacher)
+        # 2. Initialize Judge (The Teacher)
         print("   ⚖️  Initializing LLM Judge...")
-        # You can hardcode a smart model here or add a 'judge' section to config
-        self.judge_llm = get_llm(provider="google", model_name="gemini-1.5-flash")
+        judge_conf = self.config.get('agents', {}).get('judge', {}) if 'judge' in self.config.get('agents', {}) else self.config.get('judge', {})
+        # Fallback if not configured
+        provider = judge_conf.get('provider', 'google')
+        model = judge_conf.get('model', 'gemini-2.5-flash')
+        
+        self.judge_llm = get_llm(provider=provider, model_name=model)
 
         # 3. Initialize Agents (The Students)
         print("   🤖 Initializing Agents...")
