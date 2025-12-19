@@ -1,34 +1,745 @@
+suite_id: sales_tasks
+suite_name: AgentOps Sales Benchmark Tasks
+version: v1.0
+description: Sales-focused benchmark tasks for evaluating agent workflows using a controlled CRM + KB environment. Outputs are machine-gradable via hard gates and scored via soft rubrics.
+tasks:
 - task_id: SALES-001
-  name: Cold Outreach - CyberDyne
+  name: Cold Outreach - CyberDyne (CTO)
   category: Sales
   difficulty: High
-  description: Find the CTO of CyberDyne Systems and draft a technical email.
-  input_prompt: I need to contact the CTO of CyberDyne Systems. Find their name and email in the CRM. Draft a cold email introducing 'Omni-AI Sentinel 2.0'. Emphasize that it runs locally on-premise.
-  resources_needed:
-  - crm_mock/contacts.csv
-  - knowledge_base/product_whitepaper.md
-  eval_rules:
-    hard_gates:
-      must_contain:
-      - Bob
-      - Omni-AI Sentinel
-      - on-premise
-      forbidden_terms:
-      - '[Insert Name]'
-    soft_score_rubric: Professionalism, Brevity, and Persuasion
-- task_id: SALES-002
-  name: Discount Negotiation - Stark Ind
-  category: Negotiation
-  difficulty: Hard
-  description: Client wants 20% discount. Check revenue vs policy.
-  input_prompt: Pepper Potts from Stark Industries is asking for a 20% discount. Check their revenue in the CRM and our Security Policy. Can we approve this request? Draft a reply.
+  description: Find CyberDyne Systems CTO in CRM and draft a technical cold email introducing Omni-AI Sentinel 2.0 (on-premise).
+  input_prompt: |-
+    Use ONLY the provided CRM + KB (no internet).
+    1) Find the CTO of CyberDyne Systems in the CRM.
+    2) Draft a concise cold email introducing "Omni-AI Sentinel 2.0" and emphasize it runs on-premise.
+    3) Include 1 concrete technical benefit supported by the product whitepaper.
+    4) Include a single clear CTA (15–20 min call) and propose 2 time-window options (e.g., Tue AM / Thu PM).
+    Return JSON exactly matching the required schema.
   resources_needed:
   - crm_mock/accounts.csv
-  - knowledge_base/security_policy.md
+  - crm_mock/contacts.csv
+  - knowledge_base/product_whitepaper.md
+  constraints:
+    allowed_tools:
+    - crm_lookup
+    - kb_search
+    forbid_external_lookup: true
+    email_word_count_range:
+    - 120
+    - 180
+    must_include_citations: true
+  expected_output:
+    format: json
+    schema_required_fields:
+    - account_id
+    - contact_id
+    - to_name
+    - to_email
+    - subject
+    - body_markdown
+    - citations
   eval_rules:
     hard_gates:
-      must_contain:
-      - VP approval
-      forbidden_terms:
-      - happy to approve
-      - 100% security
+    - name: json_schema_valid
+      type: json_schema_validate
+      params:
+        required_fields:
+        - account_id
+        - contact_id
+        - to_name
+        - to_email
+        - subject
+        - body_markdown
+        - citations
+    - name: crm_contact_is_cto_for_cyberdyne
+      type: crm_contact_match
+      params:
+        company_name: CyberDyne Systems
+        expected_account_id: ACC-001
+        required_role: CTO
+        expected_contact_id: CT-002
+        expected_email: bob@cyberdyne.com
+    - name: mentions_product_and_deployment
+      type: regex_all
+      params:
+        patterns:
+        - Omni-AI Sentinel( 2\.0)?
+        - on-?prem(ise|ises)
+    - name: word_count_in_range
+      type: word_count
+      params:
+        field: body_markdown
+        min: 120
+        max: 180
+    - name: single_cta
+      type: cta_check
+      params:
+        field: body_markdown
+        min_ctas: 1
+        max_ctas: 1
+    - name: no_placeholders
+      type: forbidden_terms
+      params:
+        terms:
+        - '[Insert Name]'
+        - TBD
+        - Lorem ipsum
+    - name: cites_whitepaper
+      type: citation_check
+      params:
+        must_include_any_of:
+        - knowledge_base/product_whitepaper.md
+    soft_score_rubric:
+      dimensions:
+      - Professionalism
+      - Technical_Credibility
+      - Persuasion
+      - Brevity
+
+- task_id: SALES-002
+  name: Discount Negotiation - Stark Industries (20%)
+  category: Negotiation
+  difficulty: Hard
+  description: Client asks for 20% discount. Check CRM revenue + deal value and apply discount policy; draft a reply.
+  input_prompt: |-
+    Use ONLY CRM + KB (no internet).
+    Charlie Stark (Procurement Manager) at Stark Industries is asking for a 20% discount on the active opportunity.
+    1) Look up Stark Industries total_revenue in the CRM.
+    2) Look up the relevant deal details (deal_id provided below) in the CRM.
+    3) Apply the discount policy and decide: APPROVE / DECLINE / ESCALATE.
+    4) Draft a professional reply email that either escalates with the right approval chain or proposes alternatives (scope/term/phasing) without violating policy.
+    Return JSON exactly matching the required schema.
+
+    deal_id: DL-112
+  resources_needed:
+  - crm_mock/accounts.csv
+  - crm_mock/contacts.csv
+  - crm_mock/deals.csv
+  - knowledge_base/discount_policy.md
+  - knowledge_base/security_policy.md
+  constraints:
+    allowed_tools:
+    - crm_lookup
+    - kb_search
+    forbid_external_lookup: true
+    must_include_citations: true
+    forbid_absolute_security_claims: true
+  expected_output:
+    format: json
+    schema_required_fields:
+    - account_id
+    - deal_id
+    - contact_id
+    - to_name
+    - to_email
+    - decision
+    - rationale
+    - reply_email_markdown
+    - citations
+  eval_rules:
+    hard_gates:
+    - name: json_schema_valid
+      type: json_schema_validate
+      params:
+        required_fields:
+        - account_id
+        - deal_id
+        - contact_id
+        - to_name
+        - to_email
+        - decision
+        - rationale
+        - reply_email_markdown
+        - citations
+    - name: recipient_matches_crm
+      type: crm_contact_match
+      params:
+        company_name: Stark Industries
+        expected_account_id: ACC-004
+        expected_contact_id: CT-303
+        required_role: Procurement_Mgr
+        expected_email: charlie@stark.com
+    - name: deal_matches_crm
+      type: crm_deal_match
+      params:
+        expected_deal_id: DL-112
+        expected_account_id: ACC-004
+        expected_stage: Negotiation
+    - name: references_correct_revenue
+      type: crm_numeric_reference_check
+      params:
+        company_name: Stark Industries
+        crm_field: total_revenue
+        expected_value: 8000000
+        allowed_forms:
+        - '8000000'
+        - '8,000,000'
+        - 8 million
+        - 8m
+    - name: references_deal_amount
+      type: crm_numeric_reference_check
+      params:
+        deal_id: DL-112
+        crm_field: amount
+        expected_value: 1180425
+        allowed_forms:
+        - '1180425'
+        - '1,180,425'
+        - 1.18m
+        - 1.18 million
+    - name: approval_chain_present
+      type: regex_any
+      params:
+        patterns:
+        - VP approval
+        - VP sign-?off
+        - Vice President approval
+    - name: cites_discount_policy
+      type: citation_check
+      params:
+        must_include_any_of:
+        - knowledge_base/discount_policy.md
+    - name: no_overpromises
+      type: forbidden_terms
+      params:
+        terms:
+        - happy to approve
+        - 100% security
+        - guaranteed secure
+    soft_score_rubric:
+      dimensions:
+      - Policy_Reasoning
+      - Client_Tone
+      - Negotiation_Skill
+      - Clarity
+
+- task_id: SALES-003
+  name: Pursuit Plan One-Pager - Wayne Enterprises
+  category: Sales
+  difficulty: High
+  description: Create an executive-ready pursuit plan for an active negotiation deal using CRM facts + KB playbook.
+  input_prompt: |-
+    Use ONLY CRM + KB (no internet).
+    Create a 1-page pursuit plan for Wayne Enterprises for the deal below.
+    Include: (1) Situation & stakes (2) Stakeholder map (3) Value hypothesis (4) 30/60/90 plan (5) Risks & mitigations (6) Next meeting ask.
+    Use CRM for deal facts and stakeholder names. Use KB for messaging and product capability claims.
+    Return JSON exactly matching the required schema.
+
+    deal_id: DL-100
+  resources_needed:
+  - crm_mock/accounts.csv
+  - crm_mock/contacts.csv
+  - crm_mock/deals.csv
+  - knowledge_base/sales_playbook.md
+  - knowledge_base/product_whitepaper.md
+  - knowledge_base/case_study_library.md
+  constraints:
+    allowed_tools:
+    - crm_lookup
+    - kb_search
+    forbid_external_lookup: true
+    must_include_citations: true
+  expected_output:
+    format: json
+    schema_required_fields:
+    - account_id
+    - deal_id
+    - deal_summary
+    - stakeholders
+    - value_hypothesis
+    - plan_30_60_90
+    - risks
+    - next_meeting_ask
+    - citations
+  eval_rules:
+    hard_gates:
+    - name: json_schema_valid
+      type: json_schema_validate
+      params:
+        required_fields:
+        - account_id
+        - deal_id
+        - deal_summary
+        - stakeholders
+        - value_hypothesis
+        - plan_30_60_90
+        - risks
+        - next_meeting_ask
+        - citations
+    - name: deal_matches_crm
+      type: crm_deal_match
+      params:
+        expected_deal_id: DL-100
+        expected_account_id: ACC-003
+        expected_stage: Negotiation
+    - name: mentions_at_least_two_real_stakeholders
+      type: crm_stakeholder_presence_check
+      params:
+        company_name: Wayne Enterprises
+        required_contact_names:
+        - Alice Wayne
+        - Bob Wayne
+        - Charlie Wayne
+        min_unique: 2
+    - name: includes_30_60_90
+      type: section_presence
+      params:
+        field: plan_30_60_90
+        min_items: 3
+    - name: cites_at_least_two_kb_docs
+      type: citation_check
+      params:
+        min_citations: 2
+        must_include_any_of:
+        - knowledge_base/sales_playbook.md
+        - knowledge_base/product_whitepaper.md
+    - name: no_placeholders
+      type: forbidden_terms
+      params:
+        terms:
+        - '[Insert'
+        - TBD
+        - Lorem ipsum
+    soft_score_rubric:
+      dimensions:
+      - Executive_Readiness
+      - Groundedness
+      - Actionability
+      - Clarity
+
+- task_id: SALES-004
+  name: Win-back Discovery Agenda - Acme Corp (Churned)
+  category: Sales
+  difficulty: Medium
+  description: Build a win-back discovery call agenda and qualification questions for a churned account with an active discovery-stage deal.
+  input_prompt: |-
+    Use ONLY CRM + KB (no internet).
+    Acme Corp is marked as CHURNED in the CRM but has an active discovery-stage deal.
+    Create:
+    1) A 30-minute discovery agenda (time-boxed)
+    2) 12 qualification questions grouped into: Business, Technical, Security/Compliance, Commercial
+    3) 3 hypotheses about why they churned and what would win them back
+    Return JSON exactly matching the required schema.
+
+    deal_id: DL-111
+  resources_needed:
+  - crm_mock/accounts.csv
+  - crm_mock/contacts.csv
+  - crm_mock/deals.csv
+  - knowledge_base/winback_playbook.md
+  - knowledge_base/security_policy.md
+  constraints:
+    allowed_tools:
+    - crm_lookup
+    - kb_search
+    forbid_external_lookup: true
+    must_include_citations: true
+  expected_output:
+    format: json
+    schema_required_fields:
+    - account_id
+    - deal_id
+    - agenda
+    - qualification_questions
+    - hypotheses
+    - citations
+  eval_rules:
+    hard_gates:
+    - name: json_schema_valid
+      type: json_schema_validate
+      params:
+        required_fields:
+        - account_id
+        - deal_id
+        - agenda
+        - qualification_questions
+        - hypotheses
+        - citations
+    - name: account_status_is_churned
+      type: crm_field_check
+      params:
+        company_name: Acme Corp
+        field: status
+        expected_value: Churned
+    - name: deal_matches_crm
+      type: crm_deal_match
+      params:
+        expected_deal_id: DL-111
+        expected_account_id: ACC-002
+        expected_stage: Discovery
+    - name: qualification_questions_count
+      type: count_check
+      params:
+        field: qualification_questions
+        expected: 12
+    - name: question_groups_present
+      type: group_presence_check
+      params:
+        field: qualification_questions
+        required_groups:
+        - Business
+        - Technical
+        - Security/Compliance
+        - Commercial
+    - name: cites_winback_playbook
+      type: citation_check
+      params:
+        must_include_any_of:
+        - knowledge_base/winback_playbook.md
+    soft_score_rubric:
+      dimensions:
+      - Discovery_Sharpness
+      - Client_Tone
+      - Actionability
+      - Structure
+
+- task_id: SALES-005
+  name: Technical Proposal Summary - Oscorp (Negotiation)
+  category: Sales
+  difficulty: High
+  description: Produce a technical + delivery summary for an in-flight negotiation deal (exec-ready).
+  input_prompt: |-
+    Use ONLY CRM + KB (no internet).
+    For Oscorp and the deal below, produce an executive-ready technical proposal summary (not a full proposal).
+    Include: solution overview, deployment model, security posture (no absolute claims), delivery approach & timeline, assumptions, and top 5 risks.
+    Return JSON exactly matching the required schema.
+
+    deal_id: DL-105
+  resources_needed:
+  - crm_mock/accounts.csv
+  - crm_mock/contacts.csv
+  - crm_mock/deals.csv
+  - knowledge_base/product_whitepaper.md
+  - knowledge_base/security_policy.md
+  - knowledge_base/delivery_methodology.md
+  constraints:
+    allowed_tools:
+    - crm_lookup
+    - kb_search
+    forbid_external_lookup: true
+    must_include_citations: true
+    forbid_absolute_security_claims: true
+  expected_output:
+    format: json
+    schema_required_fields:
+    - account_id
+    - deal_id
+    - solution_overview
+    - deployment_model
+    - timeline
+    - assumptions
+    - risks
+    - citations
+  eval_rules:
+    hard_gates:
+    - name: json_schema_valid
+      type: json_schema_validate
+      params:
+        required_fields:
+        - account_id
+        - deal_id
+        - solution_overview
+        - deployment_model
+        - timeline
+        - assumptions
+        - risks
+        - citations
+    - name: deal_matches_crm
+      type: crm_deal_match
+      params:
+        expected_deal_id: DL-105
+        expected_account_id: ACC-006
+        expected_stage: Negotiation
+    - name: risks_count
+      type: count_check
+      params:
+        field: risks
+        expected: 5
+    - name: assumptions_min
+      type: min_items_check
+      params:
+        field: assumptions
+        min: 5
+    - name: cites_security_policy
+      type: citation_check
+      params:
+        must_include_any_of:
+        - knowledge_base/security_policy.md
+    - name: no_absolute_security_claims
+      type: forbidden_terms
+      params:
+        terms:
+        - 100% security
+        - guaranteed secure
+        - perfectly secure
+    soft_score_rubric:
+      dimensions:
+      - Executive_Readiness
+      - Technical_Credibility
+      - Risk_Quality
+      - Clarity
+
+- task_id: SALES-006
+  name: 3-Step Outreach Sequence - Massive Dynamic (Prospect)
+  category: Sales
+  difficulty: Medium
+  description: Create a 3-touch outreach sequence to the CTO for a prospect account, grounded in the product whitepaper.
+  input_prompt: |-
+    Use ONLY CRM + KB (no internet).
+    Massive Dynamic is a PROSPECT account. Create a 3-step outreach sequence to the CTO:
+    1) Email #1 (cold)
+    2) Follow-up #1 (value nugget + proof)
+    3) Follow-up #2 (soft close)
+    Each message must be <= 90 words, professional, and contain a single CTA.
+    Return JSON exactly matching the required schema.
+  resources_needed:
+  - crm_mock/accounts.csv
+  - crm_mock/contacts.csv
+  - knowledge_base/product_whitepaper.md
+  - knowledge_base/case_study_library.md
+  constraints:
+    allowed_tools:
+    - crm_lookup
+    - kb_search
+    forbid_external_lookup: true
+    must_include_citations: true
+  expected_output:
+    format: json
+    schema_required_fields:
+    - account_id
+    - contact_id
+    - to_name
+    - to_email
+    - sequence
+    - citations
+  eval_rules:
+    hard_gates:
+    - name: json_schema_valid
+      type: json_schema_validate
+      params:
+        required_fields:
+        - account_id
+        - contact_id
+        - to_name
+        - to_email
+        - sequence
+        - citations
+    - name: recipient_matches_crm
+      type: crm_contact_match
+      params:
+        company_name: Massive Dynamic
+        expected_account_id: ACC-005
+        expected_contact_id: CT-402
+        required_role: CTO
+        expected_email: bob@massive.com
+    - name: account_status_is_prospect
+      type: crm_field_check
+      params:
+        company_name: Massive Dynamic
+        field: status
+        expected_value: Prospect
+    - name: three_messages
+      type: count_check
+      params:
+        field: sequence
+        expected: 3
+    - name: each_message_word_limit
+      type: per_item_word_count
+      params:
+        field: sequence
+        max_words: 90
+    - name: mentions_product
+      type: regex_any
+      params:
+        patterns:
+        - Omni-AI Sentinel( 2\.0)?
+    - name: cites_whitepaper
+      type: citation_check
+      params:
+        must_include_any_of:
+        - knowledge_base/product_whitepaper.md
+    soft_score_rubric:
+      dimensions:
+      - Brevity
+      - Persuasion
+      - Professionalism
+      - Groundedness
+
+- task_id: SALES-007
+  name: Expansion / Upgrade Pitch - Tyrell Corp (Closed Won)
+  category: Sales
+  difficulty: Medium
+  description: Propose an upgrade/expansion based on a prior closed-won deal; quantify value using CRM deal amount.
+  input_prompt: |-
+    Use ONLY CRM + KB (no internet).
+    Tyrell Corp previously had a CLOSED WON deal. Create an expansion pitch email to the CTO proposing an upgrade to "Omni-AI Sentinel 2.0" and one add-on.
+    Include: reference to prior success, a quantified value hypothesis, and a single CTA.
+    Return JSON exactly matching the required schema.
+
+    deal_id: DL-108
+  resources_needed:
+  - crm_mock/accounts.csv
+  - crm_mock/contacts.csv
+  - crm_mock/deals.csv
+  - knowledge_base/product_roadmap.md
+  - knowledge_base/product_whitepaper.md
+  constraints:
+    allowed_tools:
+    - crm_lookup
+    - kb_search
+    forbid_external_lookup: true
+    must_include_citations: true
+  expected_output:
+    format: json
+    schema_required_fields:
+    - account_id
+    - deal_id
+    - contact_id
+    - to_name
+    - to_email
+    - subject
+    - body_markdown
+    - citations
+  eval_rules:
+    hard_gates:
+    - name: json_schema_valid
+      type: json_schema_validate
+      params:
+        required_fields:
+        - account_id
+        - deal_id
+        - contact_id
+        - to_name
+        - to_email
+        - subject
+        - body_markdown
+        - citations
+    - name: recipient_matches_crm
+      type: crm_contact_match
+      params:
+        company_name: Tyrell Corp
+        expected_account_id: ACC-007
+        expected_contact_id: CT-602
+        required_role: CTO
+        expected_email: bob@tyrell.com
+    - name: deal_is_closed_won
+      type: crm_deal_match
+      params:
+        expected_deal_id: DL-108
+        expected_account_id: ACC-007
+        expected_stage: Closed Won
+    - name: references_deal_amount
+      type: crm_numeric_reference_check
+      params:
+        deal_id: DL-108
+        crm_field: amount
+        expected_value: 330799
+        allowed_forms:
+        - '330799'
+        - '330,799'
+        - 330k
+        - 0.33m
+    - name: mentions_upgrade
+      type: regex_all
+      params:
+        patterns:
+        - Omni-AI Sentinel( 2\.0)?
+        - upgrade|expan(d|s)ion|add-?on
+    - name: cites_roadmap_or_whitepaper
+      type: citation_check
+      params:
+        must_include_any_of:
+        - knowledge_base/product_roadmap.md
+        - knowledge_base/product_whitepaper.md
+    soft_score_rubric:
+      dimensions:
+      - Customer_Sensitivity
+      - Value_Clarity
+      - Persuasion
+      - Brevity
+
+- task_id: SALES-008
+  name: Closed-Lost Re-engagement - Globex
+  category: Sales
+  difficulty: Medium
+  description: Re-engage a closed-lost opportunity, ask for debrief, and propose a low-friction next step.
+  input_prompt: |-
+    Use ONLY CRM + KB (no internet).
+    Globex has a CLOSED LOST deal. Draft a re-engagement email to the Procurement Manager asking for a 15-minute debrief.
+    Include: acknowledgement of prior outcome, 3 learning questions, and a low-friction next step.
+    Return JSON exactly matching the required schema.
+
+    deal_id: DL-103
+  resources_needed:
+  - crm_mock/accounts.csv
+  - crm_mock/contacts.csv
+  - crm_mock/deals.csv
+  - knowledge_base/loss_review_playbook.md
+  constraints:
+    allowed_tools:
+    - crm_lookup
+    - kb_search
+    forbid_external_lookup: true
+    must_include_citations: true
+  expected_output:
+    format: json
+    schema_required_fields:
+    - account_id
+    - deal_id
+    - contact_id
+    - to_name
+    - to_email
+    - subject
+    - body_markdown
+    - citations
+  eval_rules:
+    hard_gates:
+    - name: json_schema_valid
+      type: json_schema_validate
+      params:
+        required_fields:
+        - account_id
+        - deal_id
+        - contact_id
+        - to_name
+        - to_email
+        - subject
+        - body_markdown
+        - citations
+    - name: recipient_matches_crm
+      type: crm_contact_match
+      params:
+        company_name: Globex
+        expected_account_id: ACC-010
+        expected_contact_id: CT-903
+        required_role: Procurement_Mgr
+        expected_email: charlie@globex.com
+    - name: deal_is_closed_lost
+      type: crm_deal_match
+      params:
+        expected_deal_id: DL-103
+        expected_account_id: ACC-010
+        expected_stage: Closed Lost
+    - name: includes_three_questions
+      type: question_count_check
+      params:
+        field: body_markdown
+        min_questions: 3
+        max_questions: 3
+    - name: cta_present
+      type: cta_check
+      params:
+        field: body_markdown
+        min_ctas: 1
+        max_ctas: 1
+    - name: cites_loss_playbook
+      type: citation_check
+      params:
+        must_include_any_of:
+        - knowledge_base/loss_review_playbook.md
+    soft_score_rubric:
+      dimensions:
+      - Empathy
+      - Clarity
+      - Actionability
+      - Professionalism

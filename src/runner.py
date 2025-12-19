@@ -1,50 +1,64 @@
-# src/runner.py
+# src/runner.py (FINAL MASTER VERSION)
 import yaml
+import json
 import pandas as pd
 import os
 import time
+import re
 from src.agents.base_agent import BaseAgent
 from src.agents.react_agent import ReactAgent
 from src.agents.planner_agent import PlannerAgent
-from src.llm_factory import get_llm # Use factory to get the Judge
+from src.llm_factory import get_llm
 
 class BenchmarkRunner:
     def __init__(self):
         print("🚀 Initializing Benchmark Suite...")
         
-        # Load Config
-        current_dir = os.path.dirname(os.path.abspath(__file__))
-        config_path = os.path.join(current_dir, "../config.yaml")
-        
+        # 1. Load Config
+        config_path = os.path.join(os.path.dirname(__file__), "../config.yaml")
+        if not os.path.exists(config_path):
+            raise FileNotFoundError("❌ config.yaml not found!")
+
         with open(config_path, "r") as f:
             self.config = yaml.safe_load(f)
 
-        # Initialize Judge (The Teacher) - Always use the smartest model available
+        # 2. Initialize Judge (The Teacher)
+        print("   ⚖️  Initializing LLM Judge...")
+        # You can hardcode a smart model here or add a 'judge' section to config
         self.judge_llm = get_llm(provider="google", model_name="gemini-1.5-flash")
 
-        # Initialize Agents (The Students)
+        # 3. Initialize Agents (The Students)
+        print("   🤖 Initializing Agents...")
         self.agents = {
             "Agent A": BaseAgent(self.config['agents']['agent_a']['model'], self.config['agents']['agent_a']['provider']),
             "Agent B": ReactAgent(self.config['agents']['agent_b']['model'], self.config['agents']['agent_b']['provider']),
             "Agent C": PlannerAgent(self.config['agents']['agent_c']['model'], self.config['agents']['agent_c']['provider'])
         }
         
-        # Load All Task Files
+        # 4. Load All Task Files
         self.tasks = []
         task_files = ["sales_tasks.yaml", "rfp_tasks.yaml", "meeting_tasks.yaml"]
+        base_task_dir = os.path.join(os.path.dirname(__file__), "../tasks")
         
         for file in task_files:
-            path = os.path.join(current_dir, f"../tasks/{file}")
+            path = os.path.join(base_task_dir, file)
             if os.path.exists(path):
+                print(f"   📂 Loading tasks from: {file}")
                 with open(path, "r") as f:
-                    self.tasks.extend(yaml.safe_load(f))
+                    loaded = yaml.safe_load(f)
+                    # --- PATCH: Handle both List and Dict (wrapped) YAML formats ---
+                    if isinstance(loaded, list):
+                        self.tasks.extend(loaded)
+                    elif isinstance(loaded, dict) and "tasks" in loaded:
+                        self.tasks.extend(loaded["tasks"])
+                    # ---------------------------------------------------------------
+            else:
+                print(f"   ⚠️ Warning: Task file not found: {file}")
         
         self.results = []
 
     def grade_quality(self, task_input, agent_response, rubric):
-        """
-        The Soft Judge: Asks an LLM to rate the response 1-5.
-        """
+        """Soft Judge: Asks an LLM to rate the response 1-5."""
         prompt = (
             "You are a strict Teacher grading an AI Agent's homework.\n"
             f"Original Task: {task_input}\n"
@@ -57,29 +71,77 @@ class BenchmarkRunner:
         )
         try:
             score = self.judge_llm.invoke(prompt).content.strip()
-            # extract number just in case
             return int(''.join(filter(str.isdigit, score)))
         except:
-            return 3 # Default to average if grading fails
+            return 3 
 
     def evaluate_hard_gates(self, response: str, rules: dict) -> dict:
-        # (Keep your existing hard gate logic here!)
-        gates = rules.get("hard_gates", {})
-        must_contain = gates.get("must_contain", [])
-        forbidden_terms = gates.get("forbidden_terms", [])
-        
+        """Universal Validator: JSON Schema, Regex, and String Matching."""
+        gates = rules.get("hard_gates", [])
         score = {"passed": True, "failed_reasons": []}
         
-        for term in must_contain:
-            if term.lower() not in response.lower():
-                score["passed"] = False
-                score["failed_reasons"].append(f"Missing: '{term}'")
-        
-        for term in forbidden_terms:
-            if term.lower() in response.lower():
-                score["passed"] = False
-                score["failed_reasons"].append(f"Forbidden: '{term}'")
+        # Extract JSON
+        try:
+            response_json = json.loads(response)
+            json_valid = True
+        except:
+            try:
+                match = re.search(r"```json\n(.*?)\n```", response, re.DOTALL)
+                if match:
+                    response_json = json.loads(match.group(1))
+                    json_valid = True
+                else:
+                    response_json = {}
+                    json_valid = False
+            except:
+                response_json = {}
+                json_valid = False
+
+        for gate in gates:
+            gate_type = gate.get("type")
+            gate_name = gate.get("name")
+            params = gate.get("params", {})
+
+            # 1. JSON Schema Validation
+            if gate_type == "json_schema_validate":
+                if not json_valid:
+                    score["passed"] = False
+                    score["failed_reasons"].append(f"{gate_name}: Output was not valid JSON.")
+                    continue
+                missing = [f for f in params.get("required_fields", []) if f not in response_json]
+                if missing:
+                    score["passed"] = False
+                    score["failed_reasons"].append(f"{gate_name}: Missing keys {missing}")
+
+            # 2. Universal Containment (IDs, Values, Regex)
+            elif gate_type in ["crm_contact_match", "crm_deal_match", "crm_field_check", "crm_numeric_reference_check", "regex_all", "regex_any", "field_equals"]:
+                targets = []
+                # Collect all possible target strings from the params
+                for key in ["expected_account_id", "expected_contact_id", "expected_email", "expected_deal_id", "expected_value", "expected", "patterns"]:
+                    val = params.get(key)
+                    if isinstance(val, list): targets.extend([str(v) for v in val])
+                    elif val: targets.append(str(val))
                 
+                # Check if they exist in the response
+                for target in targets:
+                    if target.lower() not in response.lower():
+                        score["passed"] = False
+                        score["failed_reasons"].append(f"{gate_name}: Missing '{target}'")
+
+            # 3. Forbidden Terms
+            elif gate_type == "forbidden_terms":
+                for term in params.get("terms", []):
+                    if term.lower() in response.lower():
+                        score["passed"] = False
+                        score["failed_reasons"].append(f"{gate_name}: Forbidden term '{term}' found")
+
+            # 4. Citation Check
+            elif gate_type == "citation_check":
+                files = params.get("must_include_any_of", [])
+                if not any(f in response for f in files):
+                     score["passed"] = False
+                     score["failed_reasons"].append(f"{gate_name}: No citation from {files}")
+
         return score
 
     def run_benchmark(self):
@@ -101,18 +163,16 @@ class BenchmarkRunner:
                 
                 duration = time.time() - start_time
                 
-                # 1. Hard Grading (Python)
-                hard_score = self.evaluate_hard_gates(response, task['eval_rules'])
+                # Grading
+                hard_score = self.evaluate_hard_gates(response, task.get('eval_rules', {}))
+                quality_score = self.grade_quality(task['input_prompt'], response, task.get('eval_rules', {}).get('soft_score_rubric', 'Is it helpful?'))
                 
-                # 2. Soft Grading (LLM Judge)
-                quality_score = self.grade_quality(task['input_prompt'], response, task['eval_rules'].get('soft_rubric', 'Is it helpful?'))
-                
-                # Log Data
                 self.results.append({
+                    "task_id": task.get('task_id', 'unknown'),
                     "task_name": task['name'],
                     "agent": agent_name,
                     "passed": hard_score["passed"],
-                    "quality_score_1_to_5": quality_score, # New Metric!
+                    "quality_score": quality_score,
                     "duration_seconds": round(duration, 2),
                     "fail_reasons": "; ".join(hard_score["failed_reasons"]),
                     "error": error
@@ -121,14 +181,9 @@ class BenchmarkRunner:
 
     def save_results(self):
         df = pd.DataFrame(self.results)
-        
-        # Output directory fix
-        current_dir = os.path.dirname(os.path.abspath(__file__))
-        output_dir = os.path.join(current_dir, "../outputs")
-        os.makedirs(output_dir, exist_ok=True)
-        
-        output_path = os.path.join(output_dir, "leaderboard.csv")
+        output_path = os.path.join(os.path.dirname(__file__), "../outputs/leaderboard.csv")
         df.to_csv(output_path, index=False)
+        print(f"\n📊 Results saved to: {output_path}")
         return df
 
 if __name__ == "__main__":

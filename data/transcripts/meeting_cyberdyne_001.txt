@@ -1,0 +1,12 @@
+
+    [00:00:00] Alice (CEO): Okay, let's get started. Thanks for joining.
+    [00:00:15] Sales Rep: Thanks Alice. I wanted to review the timeline.
+    [00:01:00] Bob (CTO): Yeah, the timeline is tight. I still haven't received the API keys.
+    [00:01:30] Sales Rep: I can get those to you.
+    [00:02:00] Alice (CEO): Bob, can you please finalize the firewall configuration by next Friday? We can't delay the pilot.
+    [00:02:15] Bob (CTO): Fine, but I need the documentation.
+    [00:02:30] Sales Rep: I'll send the whitepaper right after this call. Alice, can you sign the SOW amendment?
+    [00:02:45] Alice (CEO): Yes, I'll sign it by EOD tomorrow.
+    [00:03:00] Sales Rep: Great. Also, I heard rumors that Wayne Enterprises is looking at a competitor.
+    [00:03:15] Bob (CTO): Yeah, I heard they are talking to LexCorp.
+    

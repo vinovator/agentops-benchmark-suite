@@ -4,6 +4,8 @@ from langchain_experimental.agents import create_pandas_dataframe_agent
 from src.llm_factory import get_llm
 import os
 
+from src.tools.file_tools import read_document
+
 class ReactAgent:
     def __init__(self, model_name: str, provider: str):
         print(f"🛠️ Initializing Agent B (The Operator) with model: {model_name} [{provider}]")
@@ -31,6 +33,7 @@ class ReactAgent:
             "You are a pandas expert. "
             "ALWAYS run `import pandas as pd` before writing any code. "
             "You must use the provided dataframes to answer the question. "
+            "You also have a `read_document` tool to read text files from the knowledge base. "
             "IMPORTANT: When you have the answer, you MUST start your response with 'Final Answer:'. "
             "Do not explain your steps after finding the answer. Just say 'Final Answer: <the answer>'."
         )
@@ -38,6 +41,7 @@ class ReactAgent:
         agent = create_pandas_dataframe_agent(
             self.llm,
             [self.df_accounts, self.df_contacts, self.df_deals],
+            extra_tools=[read_document],
             verbose=True, 
             allow_dangerous_code=True,
             # We treat parsing errors as a 'retry' signal, not a crash

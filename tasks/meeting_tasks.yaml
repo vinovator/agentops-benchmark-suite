@@ -1,20 +1,61 @@
 - task_id: "MEET-001"
-  name: "Action Item Extraction"
+  name: "Action Item Extraction & Assignment"
+  difficulty: "High"
   input_prompt: |
     You are a Meeting Secretary.
+    1. Read 'meeting_cyberdyne_001.txt' from the transcripts folder.
+    2. Identify every Action Item assigned to a client stakeholder.
+    3. Search the CRM to find the *email address* for each stakeholder mentioned (Alice and Bob).
+    4. Assume today is Monday, October 2nd, 2025. Calculate specific due dates based on the transcript (e.g., "next Friday").
     
-    1. Read the following transcript snippet:
-       "Okay, let's wrap up. Alice, I need you to finalize the Q3 report by Friday. And Bob, please reach out to the CTO of Acme Corp to schedule a demo."
-    
-    2. For each person mentioned (Alice, Bob), search the CRM (Contacts Table) to find their Email Address.
-    3. Output a strictly formatted JSON list of action items.
-       Format: [{"assignee_email": "...", "task": "..."}]
-  
+    CRITICAL OUTPUT RULE:
+    Return JSON exactly matching this schema:
+    {
+      "meeting_id": "meeting_cyberdyne_001",
+      "action_items": [
+        {
+          "assignee_name": "Name",
+          "assignee_email": "Email from CRM",
+          "task": "Description",
+          "due_date": "YYYY-MM-DD"
+        }
+      ]
+    }
   eval_rules:
     hard_gates:
       must_contain:
-        - "alice@cyberdyne.com"   # Must look up the real email
-        - "bob@cyberdyne.com"     # Must look up the real email
-        - "finaliz"               # Task keyword
-        - "Acme Corp"             # Task keyword
-    soft_rubric: "Did the agent correctly map 'Alice' to her specific email found in the CSV, rather than guessing?"
+        - "alice@cyberdyne.com"   # Proof it linked 'Alice' to the CRM row
+        - "bob@cyberdyne.com"     # Proof it linked 'Bob' to the CRM row
+        - "2025-10-10"            # "Next Friday" from Oct 2nd is Oct 10th (Deterministic Math Check)
+        - "firewall"              # The specific task mentioned
+      forbidden_terms:
+        - "Alice (CEO)"           # Should put the name, not the transcript label
+        - "unknown"               # Must resolve emails
+
+- task_id: "MEET-002"
+  name: "Competitive Intelligence Extraction"
+  difficulty: "Medium"
+  input_prompt: |
+    You are a Sales Ops Analyst.
+    1. Read 'meeting_cyberdyne_001.txt'.
+    2. Identify if any competitors were mentioned.
+    3. Identify which *other* company is looking at a competitor (not CyberDyne).
+    4. Search the CRM to find the 'deal_id' for that other company (Wayne Enterprises).
+    
+    CRITICAL OUTPUT RULE:
+    Return JSON exactly matching this schema:
+    {
+      "risk_detected": boolean,
+      "competitor_name": "...",
+      "at_risk_company": "...",
+      "at_risk_deal_id": "..."
+    }
+  eval_rules:
+    hard_gates:
+      must_contain:
+        - "true"                  # Risk detected
+        - "LexCorp"               # The competitor mentioned
+        - "Wayne Enterprises"     # The company looking at them
+        - "DL-100"                # The specific Deal ID for Wayne Enterprises (from deals.csv)
+      forbidden_terms:
+        - "CyberDyne"             # CyberDyne isn't the one looking at LexCorp; Wayne is.

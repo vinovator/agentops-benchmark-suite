@@ -1,23 +1,130 @@
 - task_id: "RFP-001"
-  name: "Security Compliance Check"
+  name: "Security Compliance Check (No 100% Guarantee)"
+  difficulty: "Medium"
   input_prompt: |
     You are a Security Compliance Officer.
-    
-    1. Read the 'security_policy.md' file from the Knowledge Base to understand our rules.
-    2. Review the following Vendor Questionnaire requirement:
+    1. Read 'security_policy.md'.
+    2. Review this vendor requirement:
        "The vendor must agree to store all customer data in the Public Cloud (AWS/Azure) and provide a 100% security guarantee."
     
-    3. Output a final response stating:
-       - COMPLIANT: [Yes/No]
-       - REASON: [Quote the specific policy line that supports your decision]
-  
+    CRITICAL OUTPUT RULE:
+    Return JSON exactly matching this schema:
+    {
+      "compliant": boolean,
+      "reason": "Explain the decision",
+      "policy_quote": "Direct quote from policy supporting the decision"
+    }
   eval_rules:
     hard_gates:
       must_contain:
-        - "COMPLIANT: No"     # It MUST say No
-        - "public cloud"      # It MUST reference the cloud policy
-        - "100% security"     # It MUST reference the "Never promise 100%" rule
-        - "security_policy.md" # Implicit check if they actually read it (maybe) - removing this as it's not in user prompt, adhering to user prompt strictly.
+        - "100%"              # It must reference the specific issue
+        - "security guarantee"
+        - "false"             # The Boolean JSON value for compliant
       forbidden_terms:
-        - "COMPLIANT: Yes"
-    soft_rubric: "Did the agent explicitly quote the policy lines about 'On-Premise Only' and 'Never promise 100% security'?"
+        - "true"              # It CANNOT be compliant
+        - "on-premise only"   # Don't hallucinate that we are on-prem only (if policy doesn't say so)
+
+- task_id: "RFP-002"
+  name: "Commercial Pricing Quote"
+  difficulty: "Medium"
+  input_prompt: |
+    You are a Deal Desk Analyst.
+    Customer requests an annual quote for:
+      - Sentinel Enterprise
+      - Add-on: Legacy Support
+    
+    1. Look up list prices in 'pricing_guide.md'.
+    2. Calculate the total.
+    
+    CRITICAL OUTPUT RULE:
+    Return JSON exactly matching this schema:
+    {
+      "line_items": [{"sku": "...", "price": 0}],
+      "total_annual_usd": 0,
+      "notes": "..."
+    }
+  eval_rules:
+    hard_gates:
+      must_contain:
+        - "30,000"            # 25k + 5k = 30k
+        - "SEN-ENT"           # Check SKU
+        - "SUP-LEG"           # Check SKU
+      forbidden_terms:
+        - "discount"          # No discount requested
+
+- task_id: "RFP-003"
+  name: "Startup Discount Application"
+  difficulty: "Hard"
+  input_prompt: |
+    Scenario:
+      - Customer is a startup with $800,000 annual revenue.
+      - They want 'Sentinel Standard'.
+    
+    1. Check 'security_policy.md' (or discount_policy.md) for startup rules.
+    2. Calculate the final price.
+    
+    CRITICAL OUTPUT RULE:
+    Return JSON exactly matching this schema:
+    {
+      "list_price": 0,
+      "discount_percent": 0,
+      "final_price": 0,
+      "policy_justification": "..."
+    }
+  eval_rules:
+    hard_gates:
+      must_contain:
+        - "20"                # 20% discount
+        - "8,000"             # 10k - 20% = 8k
+        - "growth partner"    # Name of the discount program
+      forbidden_terms:
+        - "10,000"            # Should not remain at list price
+
+- task_id: "RFP-004"
+  name: "Discount Approval Chain"
+  difficulty: "Medium"
+  input_prompt: |
+    Requirement: "Please confirm you can offer a 25% discount on Sentinel Enterprise."
+    
+    1. Check approval rules in 'discount_policy.md'.
+    2. Respond to the client.
+    
+    CRITICAL OUTPUT RULE:
+    Return JSON exactly matching this schema:
+    {
+      "decision": "APPROVE or REQUIRE_APPROVAL",
+      "required_approver": "Role Name",
+      "response_message": "..."
+    }
+  eval_rules:
+    hard_gates:
+      must_contain:
+        - "REQUIRE_APPROVAL"
+        - "VP"                # Requires VP approval
+      forbidden_terms:
+        - "happy to approve"
+
+- task_id: "RFP-005"
+  name: "Mini Compliance Matrix"
+  difficulty: "Hard"
+  input_prompt: |
+    Fill out this compliance matrix based on our KB.
+    R1: "Vendor provides 100% security guarantee."
+    R2: "Vendor can provide annual list price for Sentinel Ultimate."
+    
+    CRITICAL OUTPUT RULE:
+    Return JSON exactly matching this schema:
+    {
+      "rows": [
+        { "id": "R1", "compliant": boolean, "comment": "..." },
+        { "id": "R2", "compliant": boolean, "comment": "..." }
+      ]
+    }
+  eval_rules:
+    hard_gates:
+      must_contain:
+        - "R1"
+        - "false"             # R1 is false (No 100% guarantee)
+        - "R2"
+        - "true"              # R2 is true (We sell Ultimate)
+        - "50,000"            # Price of Ultimate

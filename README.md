@@ -1,6 +1,6 @@
 # AgentOps Benchmarking Suite: Evaluating Agency in Enterprise Contexts
 
-This repository serves as a benchmark for evaluating the performance of autonomous AI agents in simulated enterprise environments. It moves beyond simple QA to test complex, multi-step reasoning, tool use, and adherence to strict business constraints.
+Benchmark for evaluating the performance of autonomous AI agents in simulated enterprise environments. It moves beyond simple QA to test complex, multi-step reasoning, tool use, and adherence to strict business constraints.
 
 ## Methodology
 
