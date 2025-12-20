@@ -13,3 +13,5 @@ pyyaml
 pandas
 tabulate
 fpdf
+matplotlib
+seaborn

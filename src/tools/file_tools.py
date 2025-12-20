@@ -27,3 +27,20 @@ def read_document(file_name: str) -> str:
                 return f"Error reading file: {str(e)}"
     
     return "Error: File not found. Check the file name."
+
+@tool
+def list_files() -> str:
+    """Lists all available files in the knowledge_base and transcripts directories."""
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    project_root = os.path.abspath(os.path.join(current_dir, "../../"))
+    
+    kb_path = os.path.join(project_root, "data/knowledge_base")
+    transcripts_path = os.path.join(project_root, "data/transcripts")
+    
+    files = []
+    if os.path.exists(kb_path):
+        files.extend([f"KB: {f}" for f in os.listdir(kb_path) if not f.startswith('.')])
+    if os.path.exists(transcripts_path):
+        files.extend([f"TRANSCRIPT: {f}" for f in os.listdir(transcripts_path) if not f.startswith('.')])
+        
+    return "\n".join(files) if files else "No files found."

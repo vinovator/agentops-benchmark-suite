@@ -7,7 +7,7 @@ from langgraph.graph import StateGraph, END
 from langchain_core.messages import SystemMessage, HumanMessage
 from src.llm_factory import get_llm
 
-from src.tools.file_tools import read_document
+from src.tools.file_tools import read_document, list_files
 
 # (Removed Duplicate @tool definition)
 
@@ -56,7 +56,7 @@ class PlannerAgent:
         executor_agent = create_pandas_dataframe_agent(
             self.llm,
             [self.df_accounts, self.df_contacts, self.df_deals],
-            extra_tools=[read_document], # <--- GIVE IT THE TOOL!
+            extra_tools=[read_document, list_files], # <--- GIVE IT THE TOOL!
             verbose=True,
             allow_dangerous_code=True,
             handle_parsing_errors=True

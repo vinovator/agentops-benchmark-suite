@@ -285,13 +285,26 @@ class BenchmarkRunner:
 
     def save_results(self):
         """
-        Exports the benchmark results to a CSV file.
-        Location: `../outputs/leaderboard.csv`
+        Exports the benchmark results to a CSV file and a detailed JSON trace.
+        - CSV: `../outputs/leaderboard.csv` (High-level metrics)
+        - JSON: `../outputs/run_trace_<timestamp>.json` (Deep debugging)
         """
+        # 1. Save CSV (Summary)
         df = pd.DataFrame(self.results)
-        output_path = os.path.join(os.path.dirname(__file__), "../outputs/leaderboard.csv")
-        df.to_csv(output_path, index=False)
-        print(f"\n📊 Results saved to: {output_path}")
+        output_dir = os.path.join(os.path.dirname(__file__), "../outputs")
+        os.makedirs(output_dir, exist_ok=True)
+        
+        csv_path = os.path.join(output_dir, "leaderboard.csv")
+        df.to_csv(csv_path, index=False)
+        
+        # 2. Save JSON Trace (Deep Dive)
+        # This saves the full prompt, full response, and detailed fail reasons
+        trace_path = os.path.join(output_dir, f"run_trace_{int(time.time())}.json")
+        with open(trace_path, "w") as f:
+            json.dump(self.results, f, indent=2)
+            
+        print(f"\n📊 Summary saved to: {csv_path}")
+        print(f"🕵️  Detailed Trace saved to: {trace_path}")
         return df
 
 if __name__ == "__main__":
