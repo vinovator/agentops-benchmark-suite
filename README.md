@@ -30,8 +30,6 @@ An LLM-based "Teacher" model (Gemini 1.5 Flash) evaluates the subjective quality
 *   **Tone & Professionalism**: Is the communication suitable for an executive audience?
 *   **Logic Tracing**: Did the agent's plan logically derive the answer, or was it a lucky guess?
 
-> **Engineering Note**: The runner includes a **Legacy Compatibility Patch**, ensuring backward compatibility with V1 task definitions (`sales_tasks.yaml`) to prevent pipeline fragility during schema evolution.
-
 ### 4. Traces
 The benchmark captures full execution traces, including:
 *   **Reasoning Steps**: The Chain-of-Thought (CoT) produced by the agent.
