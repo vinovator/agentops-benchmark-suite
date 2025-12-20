@@ -16,10 +16,21 @@ We define a set of diverse "Traps" designed to expose specific agent weaknesses:
 *   **Compliance (RFP)**: Requires checking vendor answers against a strict `security_policy.md`. *Tests: Context Window & Constraint Adherence.*
 *   **Meeting Extraction**: Requires resolving vague entity references (e.g., "Alice") to concrete database records (e.g., "alice@cyberdyne.com"). *Tests: Entity Resolution & hallucination.*
 
-### 3. Evals
-We implement a dual-layer supervision system for grading:
-*   **Hard Gates (Programmatic)**: deterministic checks for critical failures (e.g., using forbidden terms, missing required data points).
-*   **Soft Judge (LLM-based)**: A "Teacher" model (Gemini 1.5 Flash) grades the qualitative aspect of the response on a 1-5 Likert scale, assessing helpfulness and reasoning.
+### 3. Evaluation Architecture (The "Dual-Layer" Engine)
+We employ a tiered evaluation strategy to ensure both engineering safety and product quality.
+
+#### Layer 1: Hard Gates (Engineering & Grounding)
+A deterministic engine (`src/runner.py`) validates every response against the "Ground Truth" of the mock enterprise.
+*   **JSON Schema Compliance**: Validates that the agent output matches the required JSON structure (keys, data types) to ensure downstream integration.
+*   **Referential Integrity (Anti-Hallucination)**: Uses **Universal Containment Logic** to verify that referenced entities (e.g., Account IDs, Deal Values) actually exist in the CRM CSVs. An agent cannot simply guess "Bob"—it must retrieve `CT-002`.
+*   **Safety & Policy Constraints**: Regex-based "Forbidden Term" detection ensures adherence to business rules (e.g., "Never promise 100% security").
+
+#### Layer 2: Soft Judge (Qualitative Quality)
+An LLM-based "Teacher" model (Gemini 1.5 Flash) evaluates the subjective quality of the response.
+*   **Tone & Professionalism**: Is the communication suitable for an executive audience?
+*   **Logic Tracing**: Did the agent's plan logically derive the answer, or was it a lucky guess?
+
+> **Engineering Note**: The runner includes a **Legacy Compatibility Patch**, ensuring backward compatibility with V1 task definitions (`sales_tasks.yaml`) to prevent pipeline fragility during schema evolution.
 
 ### 4. Traces
 The benchmark captures full execution traces, including:
@@ -27,10 +38,14 @@ The benchmark captures full execution traces, including:
 *   **Tool Invocations**: Inputs and outputs of every tool call (e.g., SQL queries, file reads).
 *   **Debug Logs**: Detailed internal state changes (e.g., LangGraph state transitions).
 
-### 5. Metrics
-*   **Pass Rate**: Percentage of tasks passing all Hard Gates.
-*   **Quality Score**: Mean score (1-5) assigned by the Soft Judge.
-*   **Latency**: End-to-end execution time per task.
+### 5. Key Performance Indicators (KPIs)
+The suite generates a `leaderboard.csv` tracking the following metrics:
+
+| Metric | Definition | Why it matters |
+| :--- | :--- | :--- |
+| **Pass Rate (SR)** | % of tasks satisfying all Hard Gates. | The primary measure of reliability. |
+| **Quality Score** | Mean Likert score (1-5) from the Soft Judge. | Differentiates "technically correct" from "actually helpful." |
+| **Latency** | End-to-end execution time (seconds). | Critical for analyzing the trade-off between complex planning (Agent C) and speed (Agent A). |
 
 ## Agent Strategy Variants
 
