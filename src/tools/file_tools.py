@@ -1,46 +1,55 @@
+# src/tools/file_tools.py
 import os
 from langchain_core.tools import tool
 
 @tool
-def read_document(file_name: str) -> str:
+def list_files() -> str:
     """
-    Reads a document from the knowledge_base or transcripts folder.
-    Args:
-        file_name: The name of the file (e.g., 'security_policy.md', 'meeting_001.txt')
+    Lists all available files in the 'knowledge_base' and 'transcripts' directories.
+    Use this tool BEFORE reading a file to ensure you have the correct filename.
     """
-    # Robust path finding
+    # Dynamic path resolution to ensure we find the data directory regardless of where this is run from
     current_dir = os.path.dirname(os.path.abspath(__file__))
     project_root = os.path.abspath(os.path.join(current_dir, "../../"))
     
-    # Check both folders
-    paths_to_check = [
+    # Define the two key directories we allow agents to access
+    paths = {
+        "KB": os.path.join(project_root, "data/knowledge_base"),
+        "TRANSCRIPTS": os.path.join(project_root, "data/transcripts")
+    }
+    
+    found_files = []
+    for category, path in paths.items():
+        if os.path.exists(path):
+            # Exclude hidden files
+            files = [f for f in os.listdir(path) if not f.startswith('.')]
+            for f in files:
+                found_files.append(f"[{category}] {f}")
+    
+    return "\n".join(found_files) if found_files else "No files found."
+
+@tool
+def read_document(file_name: str) -> str:
+    """
+    Reads the full content of a file. 
+    Args: file_name (str) - The exact name of the file (e.g., 'product_whitepaper.md').
+    """
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    project_root = os.path.abspath(os.path.join(current_dir, "../../"))
+    
+    # Check both folders for the requested file
+    search_paths = [
         os.path.join(project_root, "data/knowledge_base", file_name),
         os.path.join(project_root, "data/transcripts", file_name)
     ]
     
-    for path in paths_to_check:
-        if os.path.exists(path):
+    for p in search_paths:
+        if os.path.exists(p):
             try:
-                with open(path, "r") as f:
+                with open(p, "r", encoding="utf-8") as f:
                     return f.read()
             except Exception as e:
                 return f"Error reading file: {str(e)}"
-    
-    return "Error: File not found. Check the file name."
-
-@tool
-def list_files() -> str:
-    """Lists all available files in the knowledge_base and transcripts directories."""
-    current_dir = os.path.dirname(os.path.abspath(__file__))
-    project_root = os.path.abspath(os.path.join(current_dir, "../../"))
-    
-    kb_path = os.path.join(project_root, "data/knowledge_base")
-    transcripts_path = os.path.join(project_root, "data/transcripts")
-    
-    files = []
-    if os.path.exists(kb_path):
-        files.extend([f"KB: {f}" for f in os.listdir(kb_path) if not f.startswith('.')])
-    if os.path.exists(transcripts_path):
-        files.extend([f"TRANSCRIPT: {f}" for f in os.listdir(transcripts_path) if not f.startswith('.')])
-        
-    return "\n".join(files) if files else "No files found."
+                
+    # Helpful error message guiding the agent to use the discovery tool
+    return f"Error: File '{file_name}' not found. Did you use list_files to check the name?"
