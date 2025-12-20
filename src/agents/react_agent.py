@@ -30,14 +30,14 @@ class ReactAgent:
         prefix_prompt = (
             "You are a Data Logic Agent. You have access to pandas dataframes and file tools.\n"
             "DATA MAP:\n"
-            "- `df1`: Accounts (account_id, company_name...)\n"
-            "- `df2`: Contacts (contact_id, name, email...)\n"
-            "- `df3`: Deals (deal_id, amount, stage...)\n\n"
+            "- `df1`: Accounts\n"
+            "- `df2`: Contacts\n"
+            "- `df3`: Deals\n\n"
             "CRITICAL EXECUTION RULES:\n"
             "1. ⚠️ ALWAYS start your python code with `import pandas as pd`.\n"
-            "2. NEVER assume `pd` is already defined. Import it every time.\n"
-            "3. If you need to read a file, RUN `list_files()` FIRST to see what exists.\n"
-            "4. Do not guess filenames. Check them.\n"
+            "2. If you need to read a file, RUN `list_files` FIRST.\n"
+            "3. DO NOT use quotes when calling the tool name. Correct: Action: list_files. Incorrect: Action: list_files().\n"
+            "4. When using read_document, input the filename directly."
         )
         
         agent = create_pandas_dataframe_agent(
