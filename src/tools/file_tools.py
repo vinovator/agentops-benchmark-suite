@@ -1,11 +1,24 @@
 import os
+import re
 from langchain_core.tools import tool
+from langchain_core.pydantic_v1 import BaseModel, Field
 
-@tool
+# 1. Define the Input Schema (The Contract)
+class ReadDocumentInput(BaseModel):
+    file_name: str = Field(
+        ..., 
+        description="The exact name of the file to read. Do NOT include path, just the name (e.g., 'policy.md')."
+    )
+
+class ListFilesInput(BaseModel):
+    pass # No input needed
+
+# 2. Define the Tools using the Schema
+@tool(args_schema=ListFilesInput)
 def list_files() -> str:
     """
     Lists all available files in the 'knowledge_base' and 'transcripts' directories.
-    Use this tool BEFORE reading a file to ensure you have the correct filename.
+    Always run this BEFORE reading a document.
     """
     current_dir = os.path.dirname(os.path.abspath(__file__))
     project_root = os.path.abspath(os.path.join(current_dir, "../../"))
@@ -24,23 +37,22 @@ def list_files() -> str:
     
     return "\n".join(found_files) if found_files else "No files found."
 
-@tool
+@tool(args_schema=ReadDocumentInput)
 def read_document(file_name: str) -> str:
     """
-    Reads the full content of a file. 
-    Args: file_name (str) - The exact name of the file (e.g., 'product_whitepaper.md').
+    Reads the full content of a file.
     """
-    # --- ROBUSTNESS FIX: Strip quotes if the LLM adds them ---
-    file_name = file_name.strip("'").strip('"') 
-    # ---------------------------------------------------------
-
+    # --- ENTERPRISE GUARDRAIL: Input Sanitization ---
+    # Even with Pydantic, we add a safety layer for messy local models
+    clean_name = re.sub(r"^['\"]|['\"]$", "", file_name.strip())
+    # ------------------------------------------------
+    
     current_dir = os.path.dirname(os.path.abspath(__file__))
     project_root = os.path.abspath(os.path.join(current_dir, "../../"))
     
-    # Check both folders
     search_paths = [
-        os.path.join(project_root, "data/knowledge_base", file_name),
-        os.path.join(project_root, "data/transcripts", file_name)
+        os.path.join(project_root, "data/knowledge_base", clean_name),
+        os.path.join(project_root, "data/transcripts", clean_name)
     ]
     
     for p in search_paths:
@@ -51,4 +63,4 @@ def read_document(file_name: str) -> str:
             except Exception as e:
                 return f"Error reading file: {str(e)}"
                 
-    return f"Error: File '{file_name}' not found. Did you use list_files to check the name?"
+    return f"Error: File '{clean_name}' not found. Please use list_files() first."
