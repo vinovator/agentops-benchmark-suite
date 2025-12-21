@@ -42,14 +42,17 @@ def read_document(file_name: str) -> str:
     """
     Reads the full content of a file.
     """
-    # --- ENTERPRISE GUARDRAIL: Input Sanitization ---
-    # Even with Pydantic, we add a safety layer for messy local models
+    # 1. Sanitize: Strip quotes
     clean_name = re.sub(r"^['\"]|['\"]$", "", file_name.strip())
-    # ------------------------------------------------
     
+    # 2. Robustness: Strip directory prefixes (The "Agent B Loop Fix")
+    # Agents often copy-paste "KB/file.md" from the list_files output. We fix that here.
+    clean_name = os.path.basename(clean_name) 
+
     current_dir = os.path.dirname(os.path.abspath(__file__))
     project_root = os.path.abspath(os.path.join(current_dir, "../../"))
     
+    # Check both folders
     search_paths = [
         os.path.join(project_root, "data/knowledge_base", clean_name),
         os.path.join(project_root, "data/transcripts", clean_name)
@@ -63,4 +66,4 @@ def read_document(file_name: str) -> str:
             except Exception as e:
                 return f"Error reading file: {str(e)}"
                 
-    return f"Error: File '{clean_name}' not found. Please use list_files() first."
+    return f"Error: File '{clean_name}' not found. Did you use list_files to check the name?"
